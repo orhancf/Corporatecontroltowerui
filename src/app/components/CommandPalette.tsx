@@ -11,11 +11,11 @@ import {
   CommandShortcut,
 } from "./ui/command";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  Factory,
+  Radar,
+  Calendar,
+  ShoppingBag,
+  Database,
+  LineChart,
   Search,
   Bell,
   Settings,
@@ -30,39 +30,38 @@ import {
   RefreshCw,
   Moon,
   Sun,
+  Package,
 } from "lucide-react";
 
 const pages = [
-  { label: "Executive Overview", path: "/", icon: LayoutDashboard, keywords: "dashboard home overview kpi" },
-  { label: "Inventory Control", path: "/inventory", icon: Package, keywords: "inventory stock sku warehouse" },
-  { label: "Orders & Backlog", path: "/orders", icon: ShoppingCart, keywords: "orders purchase po backlog" },
-  { label: "Supplier Performance", path: "/suppliers", icon: Users, keywords: "suppliers vendor scorecard" },
-  { label: "Production & Capacity", path: "/production", icon: Factory, keywords: "production line capacity work order" },
+  { label: "Tower", path: "/", icon: Radar, keywords: "tower dashboard kontrol merkezi kpi" },
+  { label: "Planning", path: "/planning", icon: Calendar, keywords: "planning talep tahmin forecast" },
+  { label: "Procurement", path: "/procurement", icon: ShoppingBag, keywords: "procurement satın alma tedarik po" },
+  { label: "Masterdata", path: "/masterdata", icon: Database, keywords: "masterdata katalog ürün tedarikçi" },
+  { label: "IBP", path: "/ibp", icon: LineChart, keywords: "ibp integrated business planning sop" },
 ];
 
 const quickActions = [
-  { label: "Export Dashboard Report", icon: Download, shortcut: "⌘E" },
-  { label: "Refresh All Data", icon: RefreshCw, shortcut: "⌘R" },
-  { label: "View Active Alerts", icon: AlertTriangle, shortcut: "⌘A" },
-  { label: "Toggle Theme", icon: Moon, shortcut: "⌘T" },
+  { label: "Rapor İndir", icon: Download, shortcut: "⌘E" },
+  { label: "Veriyi Yenile", icon: RefreshCw, shortcut: "⌘R" },
+  { label: "Kritik Uyarılar", icon: AlertTriangle, shortcut: "⌘A" },
+  { label: "Tema Değiştir", icon: Moon, shortcut: "⌘T" },
 ];
 
 const recentSearches = [
-  { label: "SKU-4821 — Bearing Set BS-4", icon: Package },
-  { label: "PO-7888 — SteelWorks Delay", icon: Truck },
-  { label: "Line 3 Maintenance", icon: Factory },
-  { label: "Low stock alerts", icon: AlertTriangle },
+  { label: "CAM-002 — Negatif Net Pozisyon", icon: Package },
+  { label: "CAM-004 — Gecikmiş Sipariş", icon: Truck },
+  { label: "W11 Haftalık Plan", icon: Calendar },
+  { label: "Düşük stok uyarıları", icon: AlertTriangle },
 ];
 
 const dataEntities = [
-  { label: "Steel Rod 12mm — SKU-1001", icon: Package, category: "Inventory" },
-  { label: "PO-7891 — Acme Corp", icon: FileText, category: "Orders" },
-  { label: "Acme Corp — Preferred Supplier", icon: Users, category: "Suppliers" },
-  { label: "WO-3401 — Motor Unit M-7", icon: Factory, category: "Production" },
-  { label: "Copper Wire 2.5mm — Low Stock", icon: AlertTriangle, category: "Inventory" },
-  { label: "GlobalTex — Under Review", icon: Users, category: "Suppliers" },
-  { label: "PO-7888 — Delayed", icon: Truck, category: "Orders" },
-  { label: "PCB Assembly v3 — WIP", icon: BarChart3, category: "Production" },
+  { label: "CAM-001 — 850 KG Net Poz", icon: Package, category: "Key Item" },
+  { label: "CAM-002 — Kritik Uyarı", icon: AlertTriangle, category: "Key Item" },
+  { label: "TR Katman1 — Stok Durumu", icon: BarChart3, category: "Lokasyon" },
+  { label: "BG Katman1 — Transit", icon: Truck, category: "Lokasyon" },
+  { label: "W11 — Net Pozisyon Raporu", icon: FileText, category: "Rapor" },
+  { label: "ABC Segment Analizi", icon: TrendingUp, category: "Analiz" },
 ];
 
 interface CommandPaletteProps {
@@ -107,11 +106,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search pages, orders, SKUs, suppliers..." />
+      <CommandInput placeholder="Sayfa, sipariş, ürün, tedarikçi ara..." />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
 
-        <CommandGroup heading="Pages">
+        <CommandGroup heading="Sayfalar">
           {pages.map((page) => (
             <CommandItem
               key={page.path}
@@ -126,7 +125,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandSeparator />
 
-        <CommandGroup heading="Quick Actions">
+        <CommandGroup heading="Hızlı Eylemler">
           {quickActions.map((action) => (
             <CommandItem
               key={action.label}
@@ -141,7 +140,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandSeparator />
 
-        <CommandGroup heading="Recent Searches">
+        <CommandGroup heading="Son Aramalar">
           {recentSearches.map((item) => (
             <CommandItem
               key={item.label}
@@ -155,7 +154,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandSeparator />
 
-        <CommandGroup heading="Data">
+        <CommandGroup heading="Veri">
           {dataEntities.map((entity) => (
             <CommandItem
               key={entity.label}

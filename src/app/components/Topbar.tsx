@@ -17,7 +17,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
         {/* Search */}
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2/60 border border-border text-muted-foreground hover:text-foreground hover:bg-surface-3/60 transition-colors">
           <Search className="w-3.5 h-3.5" />
-          <span className="text-xs">Search...</span>
+          <span className="text-xs">Ara...</span>
           <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-surface-3 px-1.5 py-0.5 rounded">
             <Command className="w-2.5 h-2.5" /> K
           </kbd>
@@ -26,7 +26,7 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
         {/* Date display */}
         <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar className="w-3.5 h-3.5" />
-          <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+          <span>{new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</span>
         </div>
 
         {/* Notifications */}

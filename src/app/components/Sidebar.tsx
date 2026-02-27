@@ -1,26 +1,26 @@
 import { useState } from "react";
 import { NavLink } from "react-router";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  Factory,
+  Radar,
+  Calendar,
+  ShoppingBag,
+  Database,
+  LineChart,
   ChevronLeft,
   ChevronRight,
   Settings,
   Bell,
   HelpCircle,
-  Hexagon,
+  Workflow,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip";
 
 const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Overview", end: true },
-  { to: "/inventory", icon: Package, label: "Inventory" },
-  { to: "/orders", icon: ShoppingCart, label: "Orders" },
-  { to: "/suppliers", icon: Users, label: "Suppliers" },
-  { to: "/production", icon: Factory, label: "Production" },
+  { to: "/", icon: Radar, label: "Tower", end: true },
+  { to: "/planning", icon: Calendar, label: "Planning" },
+  { to: "/procurement", icon: ShoppingBag, label: "Procurement" },
+  { to: "/masterdata", icon: Database, label: "Masterdata" },
+  { to: "/ibp", icon: LineChart, label: "IBP" },
 ];
 
 const bottomItems = [
@@ -43,15 +43,15 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 shrink-0">
         <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-          <Hexagon className="w-5 h-5 text-primary" />
+          <Workflow className="w-5 h-5 text-primary" />
         </div>
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
             <span className="text-sm text-foreground tracking-tight truncate">
-              ControlTower
+              WiseFlow SCCT
             </span>
             <span className="text-[11px] text-muted-foreground truncate">
-              Supply Chain HQ
+              Cambro Özay
             </span>
           </div>
         )}
