@@ -129,6 +129,3 @@ pnpm run dev
 pnpm run build
 ```
 
-## 📄 Lisans
-
-Proprietary - Cambro Özay için geliştirilmiştir.
