@@ -1,53 +1,40 @@
 /**
- * API Service Layer
- * 
- * Bu dosya gelecekte gerçek API çağrıları için kullanılacak.
- * Şu anda mock data döndürüyor, ancak API endpoint'leri hazır olduğunda
- * fetch() çağrılarına kolayca dönüştürülebilir.
+ * API Service Layer — WiseFlowSCCT Backend
+ *
+ * Bu dosya WiseFlowSCCT Express backend'ine bağlanır.
+ * Base URL: import.meta.env.VITE_API_BASE_URL (default: http://localhost:3000)
  */
 
-// Base API configuration
-const API_BASE_URL = process.env.VITE_API_BASE_URL || "https://api.wiseflow-scct.com";
-const API_TIMEOUT = 10000; // 10 seconds
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE_URL) ||
+  "http://localhost:3000";
 
-// API Client with error handling
-async function apiRequest<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
+const API_TIMEOUT = 10000;
+
+async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT);
-
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
+      headers: { "Content-Type": "application/json", ...options?.headers },
     });
-
     clearTimeout(timeout);
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
+    if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
     return await response.json();
   } catch (error) {
     clearTimeout(timeout);
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        throw new Error("Request timeout");
-      }
+      if (error.name === "AbortError") throw new Error("İstek zaman aşımına uğradı");
       throw error;
     }
-    throw new Error("Unknown error occurred");
+    throw new Error("Bilinmeyen hata");
   }
 }
 
-// Types
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface KpiData {
   hazirStokDegeri: number;
   acikSiparisler: number;
@@ -67,10 +54,14 @@ export interface SegmentData {
 }
 
 export interface KeyItem {
-  code: string;
+  catalogCode: string;
+  description: string;
+  readyStock: number;
+  totalStock: number;
+  openOrders: number;
   netPosition: number;
-  alertFlag?: boolean;
-  week?: string;
+  alertFlag: boolean;
+  valueEUR: string;
 }
 
 export interface Alert {
@@ -78,7 +69,6 @@ export interface Alert {
   type: "warning" | "info" | "success" | "error";
   title: string;
   message: string;
-  timestamp: string;
 }
 
 export interface Movement {
@@ -89,124 +79,90 @@ export interface Movement {
   statusLabel: string;
 }
 
-// API Methods - Currently returning mock data
-// Replace these with real API calls when backend is ready
+// ─── API Methods ──────────────────────────────────────────────────────────────
 
+/** GET /api/v1/tower/key-items → KPI özet */
 export async function getKpiData(): Promise<KpiData> {
-  // TODO: Replace with real API call
-  // return apiRequest<KpiData>('/api/v1/kpis');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        hazirStokDegeri: 2800000,
-        acikSiparisler: 8450,
-        difot: 87.3,
-        uyariliUrun: 12,
-      });
-    }, 300);
-  });
+  const res = await apiRequest<{ data: KeyItem[] }>("/api/v1/tower/key-items");
+  const items = res.data;
+  const hazirStokDegeri = items.reduce((sum, i) => {
+    const num = parseFloat(i.valueEUR.replace(/[^\d.,-]/g, "").replace(",", "."));
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
+  const acikSiparisler = items.reduce((sum, i) => sum + i.openOrders, 0);
+  const uyariliUrun = items.filter((i) => i.alertFlag).length;
+  return { hazirStokDegeri, acikSiparisler, difot: 0, uyariliUrun };
 }
 
+/** GET /api/v1/planning/net-position → TR + BG haftalık trend */
 export async function getNetPositionTrend(): Promise<NetPositionWeek[]> {
-  // TODO: Replace with real API call
-  // return apiRequest<NetPositionWeek[]>('/api/v1/net-position/trend');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { week: "W09", trNet: 1240, bgNet: 850 },
-        { week: "W10", trNet: 980, bgNet: 620 },
-        { week: "W11", trNet: -150, bgNet: -320 },
-        { week: "W12", trNet: 420, bgNet: 180 },
-        { week: "W13", trNet: 890, bgNet: 540 },
-        { week: "W14", trNet: 1120, bgNet: 780 },
-      ]);
-    }, 300);
-  });
+  const [trRes, bgRes] = await Promise.all([
+    apiRequest<{ data: Array<{ weekNo: string; layer1: number }> }>(
+      "/api/v1/planning/net-position?country=TR"
+    ),
+    apiRequest<{ data: Array<{ weekNo: string; layer1: number }> }>(
+      "/api/v1/planning/net-position?country=BG"
+    ),
+  ]);
+  const trMap = new Map(trRes.data.map((r) => [r.weekNo, r.layer1]));
+  const bgMap = new Map(bgRes.data.map((r) => [r.weekNo, r.layer1]));
+  const weeks = [...new Set([...trMap.keys(), ...bgMap.keys()])].sort();
+  return weeks.slice(0, 6).map((week) => ({
+    week: week.replace(/^\d{4}-/, ""),
+    trNet: trMap.get(week) ?? 0,
+    bgNet: bgMap.get(week) ?? 0,
+  }));
 }
 
+/** GET /api/v1/tower/key-items → stok dağılımı (TR/BG/Transit) */
 export async function getSegmentDistribution(): Promise<SegmentData[]> {
-  // TODO: Replace with real API call
-  // return apiRequest<SegmentData[]>('/api/v1/segments');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { name: "TR Stok", value: 42 },
-        { name: "BG Stok", value: 31 },
-        { name: "Transit", value: 27 },
-      ]);
-    }, 300);
-  });
+  const res = await apiRequest<{ data: KeyItem[] }>("/api/v1/tower/key-items");
+  const items = res.data;
+  const totalReady = items.reduce((s, i) => s + i.readyStock, 0);
+  const totalTransit = items.reduce((s, i) => s + Math.max(0, i.totalStock - i.readyStock), 0);
+  const total = totalReady + totalTransit || 1;
+  const trEst = Math.round((totalReady * 0.58 * 100) / total);
+  const bgEst = Math.round((totalReady * 0.42 * 100) / total);
+  const transit = 100 - trEst - bgEst;
+  return [
+    { name: "TR Stok", value: trEst },
+    { name: "BG Stok", value: bgEst },
+    { name: "Transit", value: Math.max(0, transit) },
+  ];
 }
 
+/** GET /api/v1/tower/key-items → key item listesi */
 export async function getKeyItems(): Promise<KeyItem[]> {
-  // TODO: Replace with real API call
-  // return apiRequest<KeyItem[]>('/api/v1/key-items');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { code: "CAM-001", netPosition: 850 },
-        { code: "CAM-002", netPosition: -350, alertFlag: true },
-        { code: "CAM-003", netPosition: 420 },
-        { code: "CAM-004", netPosition: -150, alertFlag: true },
-        { code: "CAM-005", netPosition: 620 },
-      ]);
-    }, 300);
-  });
+  const res = await apiRequest<{ data: KeyItem[] }>("/api/v1/tower/key-items");
+  return res.data;
 }
 
+/** alertFlag=true olan key item'ları uyarı olarak döndür */
 export async function getCriticalAlerts(): Promise<Alert[]> {
-  // TODO: Replace with real API call
-  // return apiRequest<Alert[]>('/api/v1/alerts/critical');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-          id: "1",
-          type: "error",
-          title: "Negatif Net Pozisyon",
-          message: "CAM-002 · W11 haftasında net pozisyon negatife düştü: -350 KG",
-          timestamp: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          type: "warning",
-          title: "Gecikmeli Sipariş",
-          message: "CAM-004 · Gecikmeli sipariş: 150 KG eksik",
-          timestamp: new Date().toISOString(),
-        },
-        {
-          id: "3",
-          type: "info",
-          title: "Transit Durum",
-          message: "CAM-001 · Transit yükleme 850 KG BG'den TR'ye yolda",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    }, 300);
-  });
+  const res = await apiRequest<{ data: KeyItem[] }>("/api/v1/tower/key-items");
+  return res.data
+    .filter((i) => i.alertFlag)
+    .slice(0, 5)
+    .map((i, idx) => ({
+      id: String(idx + 1),
+      type: (i.netPosition < -500 ? "error" : "warning") as Alert["type"],
+      title: i.netPosition < 0 ? "Negatif Net Pozisyon" : "Stok Uyarısı",
+      message: `${i.catalogCode} · ${i.description} · Net poz: ${i.netPosition.toLocaleString("tr-TR")} KG`,
+    }));
 }
 
+/** Aktif hareketleri key item'lardan türet */
 export async function getActiveMovements(): Promise<Movement[]> {
-  // TODO: Replace with real API call
-  // return apiRequest<Movement[]>('/api/v1/movements/active');
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { id: "CAM-002", week: "W11", netPosition: -350, status: "danger", statusLabel: "Negatif" },
-        { id: "CAM-004", week: "W12", netPosition: -150, status: "overdue", statusLabel: "Gecikmiş" },
-        { id: "CAM-001", week: "W13", netPosition: 850, status: "transit", statusLabel: "Yolda" },
-        { id: "CAM-005", week: "W14", netPosition: 620, status: "success", statusLabel: "Teslim Edildi" },
-        { id: "CAM-003", week: "W10", netPosition: 420, status: "info", statusLabel: "İşlemde" },
-      ]);
-    }, 300);
-  });
+  const res = await apiRequest<{ data: KeyItem[] }>("/api/v1/tower/key-items");
+  return res.data.slice(0, 5).map((i) => ({
+    id: i.catalogCode,
+    week: "—",
+    netPosition: i.netPosition,
+    status: (
+      i.netPosition < 0 ? "danger" : i.alertFlag ? "warning" : "success"
+    ) as Movement["status"],
+    statusLabel: i.netPosition < 0 ? "Negatif" : i.alertFlag ? "Uyarı" : "Normal",
+  }));
 }
 
-// Export API client for custom requests
 export { apiRequest };
